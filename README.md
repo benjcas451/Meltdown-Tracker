@@ -162,11 +162,18 @@ stillschweigend.** Die In-App-Erklärung (`DB_INFO_TEXT`) mitziehen.
 - `versionName` steht manuell in `app/build.gradle.kts`; Workflow und Tag lesen
   ihn von dort.
 - `versionCode` = `-PbuildNumber`; die CI übergibt `github.run_number`, lokal
-  gilt der Fallback 1.
+  gilt der Fallback 1. Branch-Builds und Releases laufen bewusst in **derselben**
+  Workflow-Datei und teilen sich damit den Zähler. Getrennte Dateien hätten
+  eigene Zähler, und Play lehnt einen schon einmal verwendeten `versionCode` ab.
 
 ## CI / Releases (`.github/workflows/build-release.yml`)
 
-Manuell per *workflow_dispatch*. Ein Lauf:
+**Branch-Builds:** Jeder Push auf einen Branch außer `main` startet Tests und
+baut eine signierte APK + AAB. Beide liegen 14 Tage als Artefakt am Lauf
+(Actions → Lauf → *Artifacts*), ohne Release und ohne Play-Upload. So
+entsteht z. B. das AAB für den ersten, manuellen Upload in der Play Console.
+
+**Release** manuell per *workflow_dispatch*. Ein Lauf:
 1. führt die Unit-Tests aus,
 2. baut eine signierte **APK** und hängt sie an ein GitHub-Release
    (`v<version>-<run_number>`),

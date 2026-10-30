@@ -1,6 +1,15 @@
 name: Release (APK + Play)
 
+# Zwei Auslöser in EINER Datei, damit sich beide dieselbe run_number teilen:
+# daraus entsteht der versionCode, und Play nimmt jeden nur einmal an.
+#  - workflow_dispatch: GitHub-Release mit APK, optional AAB in einen Play-Track
+#  - push auf Nicht-main-Branches: signierte APK + AAB nur als Artefakt am Lauf
+#    (kein Release, kein Play-Upload) – z. B. für den ersten, manuellen Upload
+#    in der Play Console oder zum Testen eines Branches.
 on:
+  push:
+    branches-ignore:
+      - main
   workflow_dispatch:
     inputs:
       play_upload:
@@ -26,7 +35,7 @@ on:
 
 jobs:
   release:
-    name: Testen, signieren, veröffentlichen
+    name: Testen, signieren, bereitstellen
     runs-on: ubuntu-latest
     # GITHUB_TOKEN braucht Schreibrechte, um Tag + Release anzulegen.
     permissions:
@@ -90,11 +99,24 @@ jobs:
       - name: Signierte APK bauen
         run: ./gradlew :app:assembleRelease -PbuildNumber=${{ github.run_number }}
 
-      - name: Signiertes App Bundle für Play bauen
-        if: ${{ inputs.play_upload }}
+      - name: Signiertes App Bundle bauen
+        if: ${{ github.event_name == 'push' || inputs.play_upload }}
         run: ./gradlew :app:bundleRelease -PbuildNumber=${{ github.run_number }}
 
+      # Branch-Builds: Dateien am Lauf ablegen (Actions → Lauf → Artifacts).
+      - name: APK + AAB als Artefakt ablegen
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Meltdown-v${{ steps.version.outputs.name }}-${{ github.run_number }}
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 14
+
       - name: APK als GitHub-Release veröffentlichen
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -105,7 +127,7 @@ jobs:
           body: "Meltdown-Tracker v${{ steps.version.outputs.name }} (Lauf ${{ github.run_number }}, versionCode ${{ github.run_number }}) – signierte APK, direkt installierbar."
 
       - name: App Bundle in Play hochladen
-        if: ${{ inputs.play_upload }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.play_upload }}
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
