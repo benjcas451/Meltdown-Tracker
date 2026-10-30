@@ -1,0 +1,119 @@
+name: Release (APK + Play)
+
+on:
+  workflow_dispatch:
+    inputs:
+      play_upload:
+        description: "App Bundle zusätzlich in einen Play-Track hochladen"
+        type: boolean
+        default: true
+      play_track:
+        description: "Play-Track (case-sensitiv wie in der Play Console)"
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+        default: alpha
+      play_status:
+        description: "Release-Status in Play (draft, solange die App in Play noch nie veröffentlicht wurde)"
+        type: choice
+        options:
+          - completed
+          - draft
+        default: completed
+
+jobs:
+  release:
+    name: Testen, signieren, veröffentlichen
+    runs-on: ubuntu-latest
+    # GITHUB_TOKEN braucht Schreibrechte, um Tag + Release anzulegen.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # versionName aus dem Buildfile lesen, statt ihn im Workflow zu doppeln.
+      - name: Version aus dem Buildfile lesen
+        id: version
+        run: |
+          v=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
+          if [ -z "$v" ]; then
+            echo "::error::versionName liess sich aus app/build.gradle.kts nicht lesen."
+            exit 1
+          fi
+          echo "name=$v" >> "$GITHUB_OUTPUT"
+          echo "Gebaute Version: $v"
+
+      # Start-JDK für den Gradle-Launcher; den Daemon-JDK (25) provisioniert
+      # Gradle selbst über gradle/gradle-daemon-jvm.properties.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Unit-Tests
+        run: ./gradlew :app:testDebugUnitTest
+
+      # Upload-Keystore + key.properties aus Secrets wiederherstellen.
+      # storeFile liegt relativ zum Projekt-Root, so löst app/build.gradle.kts
+      # den Pfad auf.
+      - name: Keystore & key.properties bereitstellen
+        env:
+          KEYSTORE_B64: ${{ secrets.PLAY_KEYSTORE_BASE64 }}
+          KEYSTORE_PW: ${{ secrets.PLAY_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PLAY_KEY_ALIAS }}
+          KEY_PW: ${{ secrets.PLAY_KEY_PASSWORD }}
+        run: |
+          printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' | base64 -d > upload-keystore.jks
+          sz=$(stat -c%s upload-keystore.jks 2>/dev/null || echo 0)
+          if [ "$sz" -lt 100 ]; then
+            echo "::error::PLAY_KEYSTORE_BASE64 ergibt nur $sz Bytes – Secret fehlt oder ist kein gültiges Base64."
+            exit 1
+          fi
+          for name in KEYSTORE_PW KEY_ALIAS KEY_PW; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret für $name fehlt."
+              exit 1
+            fi
+          done
+          cat > key.properties <<EOF
+          storeFile=upload-keystore.jks
+          storePassword=$KEYSTORE_PW
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PW
+          EOF
+
+      # versionCode = run_number: strikt monoton über alle Läufe.
+      - name: Signierte APK bauen
+        run: ./gradlew :app:assembleRelease -PbuildNumber=${{ github.run_number }}
+
+      - name: Signiertes App Bundle für Play bauen
+        if: ${{ inputs.play_upload }}
+        run: ./gradlew :app:bundleRelease -PbuildNumber=${{ github.run_number }}
+
+      - name: APK als GitHub-Release veröffentlichen
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: app/build/outputs/apk/release/app-release.apk
+          asset_name: Meltdown-v${{ steps.version.outputs.name }}-${{ github.run_number }}.apk
+          tag: v${{ steps.version.outputs.name }}-${{ github.run_number }}
+          overwrite: true
+          body: "Meltdown-Tracker v${{ steps.version.outputs.name }} (Lauf ${{ github.run_number }}, versionCode ${{ github.run_number }}) – signierte APK, direkt installierbar."
+
+      - name: App Bundle in Play hochladen
+        if: ${{ inputs.play_upload }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: org.dwarftsch.meltdown
+          releaseFiles: app/build/outputs/bundle/release/app-release.aab
+          tracks: ${{ inputs.play_track }}
+          status: ${{ inputs.play_status }}
+
+      - name: Keystore aufräumen
+        if: always()
+        run: rm -f upload-keystore.jks key.properties

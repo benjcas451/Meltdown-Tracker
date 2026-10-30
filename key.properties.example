@@ -1,0 +1,11 @@
+# Vorlage – kopiere diese Datei nach key.properties (Repo-Root) und trage
+# deine echten Werte ein. key.properties ist in .gitignore und darf NIE ins
+# Repo.
+#
+# storeFile: Pfad zum Keystore. Absolut oder relativ zum Repo-Root, z. B.
+#   /Users/lucas/keys/meltdown-upload.jks
+
+storePassword=DEIN_STORE_PASSWORT
+keyPassword=DEIN_KEY_PASSWORT
+keyAlias=upload
+storeFile=/ABSOLUTER/PFAD/zu/meltdown-upload.jks

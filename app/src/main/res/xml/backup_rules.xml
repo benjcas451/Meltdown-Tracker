@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+   Auto-Backup fuer Geraete bis Android 11 (API 30). Dort gibt es nur das
+   Cloud-Backup, keinen getrennten Geraete-Transfer - gesichert werden
+   deshalb ausschliesslich die Nutzdaten des lokalen Modus (SQLite).
+
+   meltdown_settings.xml bleibt bewusst aussen vor: darin stehen API-Key,
+   Cloudflare Service Token und die geraetegebundene SAF-URI (siehe
+   data_extraction_rules.xml). Der Offline-Zwischenspeicher (filesDir/offline)
+   ist ebenfalls nicht enthalten - er gehoert zu einem Server-Zugang und wird
+   beim naechsten Laden neu aufgebaut.
+-->
+<full-backup-content>
+    <include domain="database" path="." />
+</full-backup-content>

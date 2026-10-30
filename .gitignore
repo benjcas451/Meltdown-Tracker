@@ -33,3 +33,16 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Signing-Daten – niemals einchecken (siehe key.properties.example)
+/key.properties
+upload-keystore.jks
+
+# Play-Service-Account (nur als Repository-Secret)
+*service-account*.json
+
+# Build-/IDE-Artefakte
+.kotlin/
+/.idea/
+/build
+.DS_Store

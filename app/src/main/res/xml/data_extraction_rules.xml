@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+   Regeln fuer Android 12+ (API 31+): Cloud-Backup und Geraete-Transfer
+   werden bewusst unterschiedlich behandelt.
+
+   Sobald ein <include> gesetzt ist, wird ausschliesslich das Aufgefuehrte
+   gesichert - die Regeln unten sind also eine vollstaendige Whitelist.
+
+   Cloud-Backup laeuft ueber Google-Server: dorthin gehen nur die Nutzdaten
+   des lokalen Modus (SQLite, ganzer Datenbank-Ordner wegen WAL), nicht aber
+   meltdown_settings.xml. Diese Datei enthaelt API-Key und Cloudflare Service
+   Token (Zugangsdaten) sowie cert_folder_uri - eine SAF-Ordner-URI, deren
+   persistierte Leseberechtigung ein Geraetewechsel ohnehin nicht ueberlebt.
+
+   Der Geraete-Transfer laeuft direkt und Ende-zu-Ende-verschluesselt zwischen
+   altem und neuem Geraet. Dort duerfen die Einstellungen mit, damit der
+   Umzug nahtlos ist; die Zertifikats-URI wird nach dem Transfer neu
+   angefordert (CertSource prueft persistedUriPermissions).
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="database" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="database" path="." />
+        <include domain="sharedpref" path="meltdown_settings.xml" />
+    </device-transfer>
+</data-extraction-rules>
