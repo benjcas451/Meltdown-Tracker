@@ -195,6 +195,13 @@ Benötigte **Repository-Secrets** (nur Namen, Werte niemals dokumentieren):
 - Der Service-Account braucht in der Play Console Release-Rechte für diese
   App.
 - Track-Namen sind case-sensitiv.
+- Die Warnung „Dieses App Bundle enthält nativen Code und du hast keine
+  Symbole zum Debuggen hochgeladen“ lässt sich nicht beheben und kann
+  ignoriert werden. Der einzige native Code ist
+  `libandroidx.graphics.path.so` (`androidx.graphics:graphics-path`, kommt mit
+  Compose). Google liefert sie bereits gestrippt aus; `ndk.debugSymbolLevel`
+  erzeugt daraus nichts (AGP: „native debug metadata has already been
+  stripped“).
 - Play signiert mit eigenem App-Signing-Key. Der Keystore hier ist nur der
   **Upload-Key**. APKs aus dem GitHub-Release tragen den Upload-Key und lassen
   sich deshalb nicht über eine Play-Installation drüberinstallieren (und
@@ -236,6 +243,16 @@ Markenfarben, jeweils Fläche 300 mit Text 900:
 Rot bleibt Fehlern und Löschen vorbehalten. Die Zahl steht immer mit dabei,
 Farbe ist nie der einzige Informationsträger. Das App-Icon ist ein weißes Herz
 auf Flieder-Verlauf und als Themed Icon verfügbar.
+
+## Store-Grafiken (`play/`)
+
+- `icon.svg`: Quelle des Play-Store-Icons. Es ist derselbe Verlauf und dasselbe
+  Herz wie im adaptiven Launcher-Icon, im sichtbaren 72er-Ausschnitt des
+  108er-Rasters, damit Store und Startbildschirm gleich aussehen.
+- `icon-512.png`: Upload-Datei für die Play Console (512 × 512, 32-Bit-PNG
+  mit Alpha, ohne eigene Rundung; die Ecken rundet Play selbst).
+- Neu erzeugen nach Änderungen an `icon.svg`: `python3 play/render_icon.py`
+  (nur Pillow nötig).
 
 ## Was nie ins Repo darf
 

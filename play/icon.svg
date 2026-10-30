@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Play-Store-Icon (512 x 512), abgeleitet aus dem adaptiven Launcher-Icon
+     (res/drawable/ic_launcher_*.xml). viewBox 18..90 entspricht dem sichtbaren
+     72er-Ausschnitt des 108er-Rasters, also dem, was der Launcher zeigt.
+     Rendern: python3 play/render_icon.py (Pillow) -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="18 18 72 72">
+  <defs>
+    <linearGradient id="flieder" gradientUnits="userSpaceOnUse" x1="54" y1="18" x2="54" y2="90">
+      <stop offset="0" stop-color="#D9C6E5"/>
+      <stop offset="0.5" stop-color="#B497C8"/>
+      <stop offset="1" stop-color="#8E6AA6"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="108" height="108" fill="url(#flieder)"/>
+  <g transform="translate(33 33) scale(1.75)">
+    <path fill="#FFFFFF" d="M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z"/>
+  </g>
+</svg>
