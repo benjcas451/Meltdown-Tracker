@@ -7,7 +7,8 @@ chronologischen Verlauf, wie in der Weboberfläche bewusst ohne Dauer,
 Diagnose oder Auswertung.
 
 Kotlin, Jetpack Compose (Material 3), AGP 9 mit Built-in Kotlin. Aufbau,
-Werkzeuge und Design-System folgen **StillzeitTracker-Android**.
+Werkzeuge folgen **StillzeitTracker-Android**, die Oberfläche dem
+Designsystem **Minze & Honig 2.0** wie die Web-Version.
 
 | | |
 |---|---|
@@ -19,18 +20,21 @@ Werkzeuge und Design-System folgen **StillzeitTracker-Android**.
 
 ## Funktionen
 
-- **Erfassen:** Großer Button „Meltdown erfassen“. Im Dialog Kind, Zeitpunkt
-  („Jetzt“ oder Datum + Uhrzeit), Intensität 1–10 und Auslöser (höchstens 200
-  Zeichen) wählen. Vorausgewählt ist das gefilterte, zuletzt verwendete bzw.
+- **Erfassen:** Wie im Web steht „Neuer Eintrag“ oben auf der Startseite:
+  Kind, Zeitpunkt („Jetzt“ oder anderer Zeitpunkt per Datum + Uhrzeit),
+  Intensität 1–10 und Auslöser (höchstens 200 Zeichen), dann „Eintrag
+  speichern“. Vorausgewählt ist das gefilterte, zuletzt verwendete bzw.
   einzige Kind.
-- **Verlauf:** Neueste zuerst, nach Tagen gruppiert, nach Kind filterbar. Ältere
-  Einträge kommen seitenweise (50 Stück) per „Ältere Einträge laden“.
-  Bearbeiten über den Stift; Löschen über den Papierkorb oder durch Wischen
-  nach links, immer mit Rückfrage.
-- **Kinder verwalten** (Symbol in der oberen Leiste): anlegen, umbenennen,
-  löschen. Ein Kind mit Einträgen wird wie im Web nicht gelöscht (Server: 409).
-- **Einstellungen** sind immer über das Zahnrad oben erreichbar, auch wenn
-  keine Verbindung besteht. Die Fehleransicht hat zusätzlich einen
+- **Verlauf:** Darunter, neueste zuerst, nach Tagen gruppiert, nach Kind
+  filterbar. Ältere Einträge kommen seitenweise (50 Stück) per „Ältere Einträge
+  laden“. Bearbeiten über den Stift (eigene Ansicht „Eintrag bearbeiten“ mit
+  „Eintrag löschen“); Löschen auch über den Papierkorb oder durch Wischen nach
+  links, immer mit Rückfrage.
+- **Kinder verwalten** (Personen-Symbol oben): anlegen, umbenennen, löschen.
+  Ein Kind mit Einträgen wird wie im Web nicht gelöscht (Server: 409) und zeigt
+  ein Schloss.
+- **Einstellungen** sind immer über das Regler-Symbol oben erreichbar, auch
+  wenn keine Verbindung besteht. Die Fehleransicht hat zusätzlich einen
   eigenen Einstellungen-Button.
 
 ## Datenquellen
@@ -225,23 +229,37 @@ data/CloudflareServiceToken.kt  Header + Erkennung der Access-Abweisung
 data/AppSettings.kt          Prefs, Endpunkt-Bildung, Zugangskennung
 data/LocalBackupService.kt   JSON-Backup (Import max. 16 MB)
 data/ServiceFactory.kt       Datenquelle nach Einstellung
-ui/…                         Compose-UI (Theme, Start, Kinder, Einstellungen, Dialoge)
+ui/MhTheme.kt, MhBausteine.kt  Minze & Honig 2.0: Rollen, Figtree, Bausteine
+ui/…                         Compose-UI (Start, Eintrag, Kinder, Einstellungen, Dialoge)
 ```
 
-## Design-System „Minze & Honig“
+## Design-System „Minze & Honig 2.0“
 
-Übernommen aus der Stillzeit-App (`ui/Theme.kt`, Nunito, OFL-Lizenz in
-`app/src/main/assets/OFL_NUNITO.txt`). Die Intensität hat drei Stufen in den
-Markenfarben, jeweils Fläche 300 mit Text 900:
+Wie die Web-Version (`DesignGuide`, Version 2.0): `ui/MhTheme.kt` enthält die
+Rollen-Tokens hell/dunkel aus `design-tokens.json`, die Typo-Skala mit
+**Figtree** (nur 400/500/600, Lizenz in `licenses/Figtree-OFL.txt`) und die
+Material-Zuordnung; `ui/MhBausteine.kt` die gemeinsamen Bausteine (Kopf,
+Buttons, Auswahl, Listen, Hinweise, Felder). Komponenten benutzen nur Rollen
+(`Mh.farben.*`, `MhTypo.*`), nie Skalenwerte. Hell/Dunkel folgt dem System,
+Dynamic Color bleibt aus.
 
-| Stufe | Farbe |
+- Farbe ist Signal, keine Fläche: eine Hauptaktion je Ansicht (Minze-700,
+  im Dunkeln Minze-400), sonst Haarlinie oder Text.
+- Kind, Zeitpunkt und Intensität sind ruhige Auswahl-Optionen
+  (gewählt = `selectedBg`/`onSelected`), der Verlauf eine Liste mit Haarlinien.
+- Symbole sind die Liniensymbole des Guides (`res/drawable/ic_mh_*.xml`),
+  keine Material-Icons und keine Emojis.
+
+Die Intensität zeigt im Verlauf einen Punkt in der Datenfarbe, immer mit der
+Zahl daneben (Farbe ist nie der einzige Informationsträger), Stufen wie im Web:
+
+| Stufe | Rolle |
 |---|---|
-| 1–3 | Minze |
-| 4–6 | Honig |
-| 7–10 | Flieder |
+| 1–3 | `data1` (Minze) |
+| 4–7 | `data2` (Honig) |
+| 8–10 | `data3` (Flieder) |
 
-Rot bleibt Fehlern und Löschen vorbehalten. Die Zahl steht immer mit dabei,
-Farbe ist nie der einzige Informationsträger. Das App-Icon ist ein weißes Herz
+Rot bleibt Fehlern und Löschen vorbehalten. Das App-Icon ist ein weißes Herz
 auf Flieder-Verlauf und als Themed Icon verfügbar.
 
 ## Store-Grafiken (`play/`)

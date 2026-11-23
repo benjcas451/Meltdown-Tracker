@@ -2,7 +2,6 @@ package org.dwarftsch.meltdown.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -12,34 +11,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.NetworkCheck
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Restore
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.outlined.Cloud
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
@@ -47,9 +26,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,6 +36,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -67,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.dwarftsch.meltdown.R
 import org.dwarftsch.meltdown.data.AppSettings
 import org.dwarftsch.meltdown.data.CertSource
 import org.dwarftsch.meltdown.data.DataSourceMode
@@ -128,16 +107,16 @@ Der Offline-Zwischenspeicher der Server-Modi wird nicht gesichert. Noch nicht ü
 Davon unabhängig gibt es im lokalen Modus das manuelle JSON-Backup (Import bis 16 MB).
 """
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     settings: AppSettings,
     certSource: CertSource,
+    meldungen: SnackbarHostState,
     onZurueck: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val snackbar = remember { SnackbarHostState() }
 
     var mode by remember { mutableStateOf(settings.mode) }
     var mtlsUrl by remember { mutableStateOf(settings.mtlsUrl) }
@@ -152,7 +131,7 @@ fun SettingsScreen(
     var restoreBestaetigen by remember { mutableStateOf(false) }
 
     fun zeige(text: String) {
-        scope.launch { snackbar.showSnackbar(text) }
+        scope.launch { meldungen.showSnackbar(text) }
     }
 
     suspend fun pruefeZertifikate(): Boolean = runCatching { certSource.readCredentials() }.isSuccess
@@ -168,9 +147,9 @@ fun SettingsScreen(
                 onSuccess = { kinder ->
                     zeige(
                         when (kinder.size) {
-                            0 -> "Verbindung ok – noch keine Kinder angelegt."
-                            1 -> "Verbindung ok – 1 Kind."
-                            else -> "Verbindung ok – ${kinder.size} Kinder."
+                            0 -> "Verbindung steht, noch keine Kinder angelegt"
+                            1 -> "Verbindung steht, 1 Kind"
+                            else -> "Verbindung steht, ${kinder.size} Kinder"
                         },
                     )
                 },
@@ -188,7 +167,7 @@ fun SettingsScreen(
                 .onFailure { zeige("Fehler bei der Ordnerauswahl: ${it.meldung()}") }
             scope.launch {
                 certsOk = pruefeZertifikate()
-                zeige(if (certsOk) "Zertifikate gefunden." else "Keine Zertifikate gefunden.")
+                zeige(if (certsOk) "Zertifikate gefunden" else "Keine Zertifikate gefunden")
             }
         }
     }
@@ -210,7 +189,7 @@ fun SettingsScreen(
                     }
                     eintraege.size
                 }.fold(
-                    onSuccess = { zeige("Backup gespeichert ($it Einträge).") },
+                    onSuccess = { zeige("Backup gespeichert ($it Einträge)") },
                     onFailure = { zeige("Backup fehlgeschlagen: ${it.meldung()}") },
                 )
                 beschaeftigt = false
@@ -233,7 +212,7 @@ fun SettingsScreen(
                     try { lokal.ersetzeAlles(kinder, eintraege) } finally { lokal.dispose() }
                     kinder.size to eintraege.size
                 }.fold(
-                    onSuccess = { (k, e) -> zeige("Wiederhergestellt: $k Kinder, $e Einträge.") },
+                    onSuccess = { (k, e) -> zeige("Wiederhergestellt: $k Kinder, $e Einträge") },
                     onFailure = { zeige("Wiederherstellung fehlgeschlagen: ${it.meldung()}") },
                 )
                 beschaeftigt = false
@@ -241,107 +220,99 @@ fun SettingsScreen(
         }
     }
 
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Einstellungen") },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-                navigationIcon = {
-                    IconButton(onClick = onZurueck) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
-                    }
-                },
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbar) },
+        topBar = { MhKopf(titel = "Einstellungen", onZurueck = onZurueck, zurueckText = "Verlauf") },
+        snackbarHost = { SnackbarHost(meldungen) },
+        containerColor = Mh.farben.bg,
     ) { innenAbstand ->
+        val f = Mh.farben
         Column(
             modifier = Modifier
                 .padding(innenAbstand)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Mh.rand)
+                .padding(bottom = Mh.abstand8),
         ) {
-            Abschnitt("Datenquelle")
-            ModusZeile(
-                gewaehlt = mode == DataSourceMode.MTLS,
-                titel = "Server (mTLS)",
-                untertitel = "Synchronisation per Client-Zertifikat",
-            ) { mode = DataSourceMode.MTLS; settings.mode = mode }
-            ModusZeile(
-                gewaehlt = mode == DataSourceMode.CLOUDFLARE,
-                titel = "Server (Cloudflare Access)",
-                untertitel = "Zugang per Service Token",
-            ) { mode = DataSourceMode.CLOUDFLARE; settings.mode = mode }
-            ModusZeile(
-                gewaehlt = mode == DataSourceMode.LOKAL,
-                titel = "Lokal (SQLite)",
-                untertitel = "Einträge bleiben nur auf diesem Gerät",
-            ) { mode = DataSourceMode.LOKAL; settings.mode = mode }
+            MhGruppenLabel("Datenquelle", Modifier.padding(top = 0.dp))
+            Column(Modifier.selectableGroup()) {
+                ModusZeile(
+                    gewaehlt = mode == DataSourceMode.MTLS,
+                    titel = "Server (mTLS)",
+                    untertitel = "Synchronisation per Client-Zertifikat",
+                ) { mode = DataSourceMode.MTLS; settings.mode = mode }
+                ModusZeile(
+                    gewaehlt = mode == DataSourceMode.CLOUDFLARE,
+                    titel = "Server (Cloudflare Access)",
+                    untertitel = "Zugang per Service Token",
+                ) { mode = DataSourceMode.CLOUDFLARE; settings.mode = mode }
+                ModusZeile(
+                    gewaehlt = mode == DataSourceMode.LOKAL,
+                    titel = "Lokal (SQLite)",
+                    untertitel = "Einträge bleiben nur auf diesem Gerät",
+                ) { mode = DataSourceMode.LOKAL; settings.mode = mode }
+            }
 
             if (mode == DataSourceMode.MTLS) {
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                Abschnitt("Server (mTLS)")
-                UrlFeld(wert = mtlsUrl, onAenderung = {
-                    mtlsUrl = it
-                    settings.mtlsUrl = it
-                })
-                Spacer(Modifier.height(16.dp))
-                // Zusätzlich zum Client-Zertifikat: für Server, die beides
-                // prüfen. Leer lassen = nur mTLS.
-                GeheimFeld(
-                    wert = mtlsApiKey,
-                    hinweis = "Nur nötig, wenn der Server zusätzlich zum Zertifikat einen Key erwartet. " +
-                        "Leer lassen für reines mTLS.",
-                    onAenderung = {
-                        mtlsApiKey = it
-                        settings.mtlsApiKey = it
-                    },
-                )
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        if (certsOk) Icons.Filled.CheckCircle else Icons.Filled.Cancel,
-                        contentDescription = null,
-                        tint = if (certsOk) MinzeHonig.farben.erfolg else MaterialTheme.colorScheme.error,
+                MhGruppenLabel("Server (mTLS)", Modifier.padding(top = Mh.abstand8))
+                Column(verticalArrangement = Arrangement.spacedBy(Mh.abstand5)) {
+                    UrlFeld(wert = mtlsUrl, onAenderung = {
+                        mtlsUrl = it
+                        settings.mtlsUrl = it
+                    })
+                    // Zusätzlich zum Client-Zertifikat: für Server, die beides
+                    // prüfen. Leer lassen = nur mTLS.
+                    GeheimFeld(
+                        wert = mtlsApiKey,
+                        hinweis = "Nur nötig, wenn der Server zusätzlich zum Zertifikat einen Key erwartet. " +
+                            "Leer lassen für reines mTLS.",
+                        onAenderung = {
+                            mtlsApiKey = it
+                            settings.mtlsApiKey = it
+                        },
                     )
-                    Spacer(Modifier.width(12.dp))
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = Mh.abstand5, bottom = Mh.abstand3),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    MhSymbol(
+                        if (certsOk) R.drawable.ic_mh_check else R.drawable.ic_mh_alert,
+                        null,
+                        Modifier.padding(top = 2.dp),
+                        farbe = if (certsOk) f.successFg else f.errorFg,
+                    )
+                    Spacer(Modifier.width(Mh.abstand3))
                     Column {
-                        Text(if (certsOk) "Zertifikate gefunden" else "Keine Zertifikate gefunden")
+                        Text(
+                            if (certsOk) "Zertifikate gefunden" else "Keine Zertifikate gefunden",
+                            style = MhTypo.body.copy(fontWeight = FontWeight.Medium),
+                            color = f.textStrong,
+                        )
                         Text(
                             certSource.locationLabel?.let { "Ordner: $it" }
                                 ?: "Ordner mit ${CertSource.CERT_FILE_NAME} und ${CertSource.KEY_FILE_NAME} wählen",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MhTypo.small,
+                            color = f.textSecondary,
                         )
                     }
                 }
                 FlowRow(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Mh.abstand2),
+                    verticalArrangement = Arrangement.spacedBy(Mh.abstand2),
                 ) {
-                    Button(onClick = { ordnerWahl.launch(null) }, shape = MaterialTheme.shapes.medium) {
-                        Icon(Icons.Filled.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Zertifikats-Ordner wählen")
-                    }
-                    OutlinedButton(
-                        shape = MaterialTheme.shapes.medium,
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MinzeHonig.farben.gruenText),
-                        onClick = {
+                    MhZweitButton("Zertifikats-Ordner wählen", { ordnerWahl.launch(null) }, symbol = R.drawable.ic_mh_folder)
+                    MhTextButton(
+                        "Erneut prüfen",
+                        {
                             scope.launch {
                                 certsOk = pruefeZertifikate()
-                                zeige(if (certsOk) "Zertifikate gefunden." else "Keine Zertifikate gefunden.")
+                                zeige(if (certsOk) "Zertifikate gefunden" else "Keine Zertifikate gefunden")
                             }
                         },
-                    ) {
-                        Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Erneut prüfen")
-                    }
+                        symbol = R.drawable.ic_mh_refresh,
+                    )
                 }
             }
 
@@ -349,127 +320,98 @@ fun SettingsScreen(
             // Anfrage erst danach an den Server weiter; der Meltdown-Tracker
             // verlangt dahinter in der Regel zusätzlich seinen eigenen Key.
             if (mode == DataSourceMode.CLOUDFLARE) {
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                Abschnitt("Server (Cloudflare Access)")
-                UrlFeld(wert = cloudflareUrl, onAenderung = {
-                    cloudflareUrl = it
-                    settings.cloudflareUrl = it
-                })
-                Spacer(Modifier.height(16.dp))
-                GeheimFeld(
-                    wert = cfClientId,
-                    titel = "Client-ID",
-                    hinweis = "Client-ID des Service Tokens, endet üblicherweise auf „.access“.",
-                    onAenderung = {
-                        cfClientId = it
-                        settings.cfAccessClientId = it
-                    },
-                )
-                Spacer(Modifier.height(16.dp))
-                GeheimFeld(
-                    wert = cfClientSecret,
-                    titel = "Client-Secret",
-                    hinweis = "Beide Teile nötig. Service Tokens laufen ab, standardmäßig nach einem Jahr.",
-                    onAenderung = {
-                        cfClientSecret = it
-                        settings.cfAccessClientSecret = it
-                    },
-                )
-                Spacer(Modifier.height(16.dp))
-                GeheimFeld(
-                    wert = cloudflareApiKey,
-                    hinweis = "API-Key des Meltdown-Trackers dieser Familie, falls der Server ihn hinter " +
-                        "Cloudflare zusätzlich verlangt.",
-                    onAenderung = {
-                        cloudflareApiKey = it
-                        settings.cloudflareApiKey = it
-                    },
-                )
+                MhGruppenLabel("Server (Cloudflare Access)", Modifier.padding(top = Mh.abstand8))
+                Column(verticalArrangement = Arrangement.spacedBy(Mh.abstand5)) {
+                    UrlFeld(wert = cloudflareUrl, onAenderung = {
+                        cloudflareUrl = it
+                        settings.cloudflareUrl = it
+                    })
+                    GeheimFeld(
+                        wert = cfClientId,
+                        titel = "Client-ID",
+                        hinweis = "Client-ID des Service Tokens, endet üblicherweise auf „.access“.",
+                        onAenderung = {
+                            cfClientId = it
+                            settings.cfAccessClientId = it
+                        },
+                    )
+                    GeheimFeld(
+                        wert = cfClientSecret,
+                        titel = "Client-Secret",
+                        hinweis = "Beide Teile nötig. Service Tokens laufen ab, standardmäßig nach einem Jahr.",
+                        onAenderung = {
+                            cfClientSecret = it
+                            settings.cfAccessClientSecret = it
+                        },
+                    )
+                    GeheimFeld(
+                        wert = cloudflareApiKey,
+                        hinweis = "API-Key des Meltdown-Trackers dieser Familie, falls der Server ihn hinter " +
+                            "Cloudflare zusätzlich verlangt.",
+                        onAenderung = {
+                            cloudflareApiKey = it
+                            settings.cloudflareApiKey = it
+                        },
+                    )
+                }
             }
 
             if (mode != DataSourceMode.LOKAL) {
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = ::verbindungTesten,
+                Spacer(Modifier.height(Mh.abstand5))
+                MhZweitButton(
+                    if (beschaeftigt) "Bitte warten …" else "Verbindung testen",
+                    ::verbindungTesten,
                     enabled = !beschaeftigt,
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MinzeHonig.farben.gruenText),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                ) {
-                    Icon(Icons.Filled.NetworkCheck, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(if (beschaeftigt) "Bitte warten …" else "Verbindung testen")
-                }
-            }
-
-            if (mode == DataSourceMode.LOKAL) {
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                Abschnitt("Backup")
-                Button(
-                    onClick = { backupSpeichern.launch(LocalBackupService.dateiname()) },
-                    enabled = !beschaeftigt,
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary,
-                        contentColor = MaterialTheme.colorScheme.onSecondary,
-                    ),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                ) {
-                    Icon(Icons.Filled.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(if (beschaeftigt) "Bitte warten …" else "Backup speichern")
-                }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { restoreBestaetigen = true },
-                    enabled = !beschaeftigt,
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MinzeHonig.farben.gruenText),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                ) {
-                    Icon(Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Backup wiederherstellen")
-                }
-                Text(
-                    "Im Dateidialog z. B. Google Drive als Ziel wählen.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                    symbol = R.drawable.ic_mh_cloud,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
 
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Abschnitt("Erklärung")
-            FlowRow(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MinzeHonig.farben.gruenText),
-                    onClick = { infoDialog = "Aufbau API" to API_INFO_TEXT.trim() },
-                ) {
-                    Icon(Icons.Outlined.Cloud, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Aufbau API")
+            if (mode == DataSourceMode.LOKAL) {
+                MhGruppenLabel("Backup", Modifier.padding(top = Mh.abstand8))
+                Column(verticalArrangement = Arrangement.spacedBy(Mh.abstand2)) {
+                    MhZweitButton(
+                        if (beschaeftigt) "Bitte warten …" else "Backup speichern",
+                        { backupSpeichern.launch(LocalBackupService.dateiname()) },
+                        enabled = !beschaeftigt,
+                        symbol = R.drawable.ic_mh_save,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    MhZweitButton(
+                        "Backup wiederherstellen",
+                        { restoreBestaetigen = true },
+                        enabled = !beschaeftigt,
+                        symbol = R.drawable.ic_mh_undo,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
-                OutlinedButton(
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MinzeHonig.farben.gruenText),
-                    onClick = { infoDialog = "Aufbau Datenbank" to DB_INFO_TEXT.trim() },
-                ) {
-                    Icon(Icons.Filled.Storage, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Aufbau Datenbank")
-                }
+                Text(
+                    "Im Dateidialog z. B. Google Drive als Ziel wählen.",
+                    style = MhTypo.small,
+                    color = f.textSecondary,
+                    modifier = Modifier.padding(top = Mh.abstand2),
+                )
             }
+
+            MhGruppenLabel("Erklärung", Modifier.padding(top = Mh.abstand8))
+            MhListenZeile(
+                "Aufbau API",
+                symbol = R.drawable.ic_mh_cloud,
+                pfeil = true,
+                onClick = { infoDialog = "Aufbau API" to API_INFO_TEXT.trim() },
+            )
+            MhTrennlinie()
+            MhListenZeile(
+                "Aufbau Datenbank",
+                symbol = R.drawable.ic_mh_file,
+                pfeil = true,
+                onClick = { infoDialog = "Aufbau Datenbank" to DB_INFO_TEXT.trim() },
+            )
             Text(
                 "Version ${appVersion(context)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(16.dp),
+                style = MhTypo.small,
+                color = f.textTertiary,
+                modifier = Modifier.padding(top = Mh.abstand6),
             )
         }
     }
@@ -477,30 +419,15 @@ fun SettingsScreen(
     infoDialog?.let { (titel, text) -> InfoDialog(titel = titel, text = text, onSchliessen = { infoDialog = null }) }
 
     if (restoreBestaetigen) {
-        AlertDialog(
-            shape = MaterialTheme.shapes.extraLarge,
-            onDismissRequest = { restoreBestaetigen = false },
-            title = { Text("Backup wiederherstellen?") },
-            text = {
-                Text(
-                    "Alle lokal gespeicherten Kinder und Einträge werden durch den Inhalt des Backups " +
-                        "ersetzt. Das lässt sich nicht rückgängig machen.",
-                )
-            },
-            confirmButton = {
-                Button(
-                    shape = MaterialTheme.shapes.medium,
-                    onClick = {
-                        restoreBestaetigen = false
-                        backupOeffnen.launch(arrayOf("application/json"))
-                    },
-                ) { Text("Backup auswählen") }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { restoreBestaetigen = false },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MinzeHonig.farben.gruenText),
-                ) { Text("Abbrechen") }
+        FrageDialog(
+            titel = "Backup wiederherstellen?",
+            text = "Alle lokal gespeicherten Kinder und Einträge werden durch den Inhalt des Backups " +
+                "ersetzt. Das lässt sich nicht rückgängig machen.",
+            aktion = "Backup auswählen",
+            onAbbrechen = { restoreBestaetigen = false },
+            onBestaetigen = {
+                restoreBestaetigen = false
+                backupOeffnen.launch(arrayOf("application/json"))
             },
         )
     }
@@ -509,34 +436,29 @@ fun SettingsScreen(
 private fun appVersion(context: android.content.Context): String =
     runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "?"
 
-@Composable
-private fun Abschnitt(titel: String) {
-    Text(
-        titel,
-        style = MaterialTheme.typography.titleSmall,
-        color = MinzeHonig.farben.sektionsTitel,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
-    )
-}
-
+/** Auswahlzeile mit Optionsfeld: Titel, Nebentext, ganze Zeile tippbar. */
 @Composable
 private fun ModusZeile(gewaehlt: Boolean, titel: String, untertitel: String, onWahl: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onWahl)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .heightIn(min = 56.dp)
+            .selectable(selected = gewaehlt, role = Role.RadioButton, onClick = onWahl)
+            .padding(vertical = Mh.abstand2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(
             selected = gewaehlt,
-            onClick = onWahl,
-            colors = RadioButtonDefaults.colors(selectedColor = MinzeHonig.farben.gruenText),
+            onClick = null,
+            colors = RadioButtonDefaults.colors(
+                selectedColor = Mh.farben.primary,
+                unselectedColor = Mh.farben.borderStrong,
+            ),
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(Mh.abstand3))
         Column {
-            Text(titel)
-            Text(untertitel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(titel, style = MhTypo.body.copy(fontWeight = FontWeight.Medium), color = Mh.farben.textStrong)
+            Text(untertitel, style = MhTypo.small, color = Mh.farben.textSecondary)
         }
     }
 }
@@ -547,43 +469,44 @@ private fun GeheimFeld(
     wert: String,
     hinweis: String,
     onAenderung: (String) -> Unit,
-    titel: String = "API-Key (optional)",
+    titel: String = "API-Key",
 ) {
     var sichtbar by remember { mutableStateOf(false) }
-    OutlinedTextField(
-        value = wert,
-        onValueChange = onAenderung,
-        shape = MaterialTheme.shapes.medium,
-        colors = mhEingabefeldFarben(),
-        label = { Text(titel) },
-        supportingText = { Text(hinweis) },
-        singleLine = true,
-        visualTransformation = if (sichtbar) VisualTransformation.None else PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Password),
-        trailingIcon = {
-            IconButton(onClick = { sichtbar = !sichtbar }) {
-                Icon(
-                    if (sichtbar) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                    contentDescription = if (sichtbar) "Verbergen" else "Anzeigen",
+    MhFeld(titel, zusatz = if (titel == "API-Key") "optional" else null, hinweis = hinweis) {
+        OutlinedTextField(
+            value = wert,
+            onValueChange = onAenderung,
+            textStyle = MhTypo.body,
+            shape = MhFeldForm,
+            colors = mhFeldFarben(),
+            singleLine = true,
+            visualTransformation = if (sichtbar) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Password),
+            trailingIcon = {
+                MhSymbolButton(
+                    if (sichtbar) R.drawable.ic_mh_eye_off else R.drawable.ic_mh_eye,
+                    if (sichtbar) "Verbergen" else "Anzeigen",
+                    { sichtbar = !sichtbar },
                 )
-            }
-        },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-    )
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
 
 @Composable
 private fun UrlFeld(wert: String, onAenderung: (String) -> Unit) {
-    OutlinedTextField(
-        value = wert,
-        onValueChange = onAenderung,
-        shape = MaterialTheme.shapes.medium,
-        colors = mhEingabefeldFarben(),
-        label = { Text("API-URL") },
-        placeholder = { Text("https://server.example/meltdown-tracker/") },
-        supportingText = { Text("Ordner des Meltdown-Trackers; „api.php“ ergänzt die App.") },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Uri),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-    )
+    MhFeld("API-URL", hinweis = "Ordner des Meltdown-Trackers; „api.php“ ergänzt die App.") {
+        OutlinedTextField(
+            value = wert,
+            onValueChange = onAenderung,
+            textStyle = MhTypo.body,
+            shape = MhFeldForm,
+            colors = mhFeldFarben(),
+            placeholder = { Text("https://server.example/meltdown-tracker/", style = MhTypo.body) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Uri),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
