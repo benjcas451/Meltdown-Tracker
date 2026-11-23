@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Seitenhintergrund (Design-Guide: Grundregel). -->
+    <color name="fenster_hintergrund">#FFFFFF</color>
+</resources>
