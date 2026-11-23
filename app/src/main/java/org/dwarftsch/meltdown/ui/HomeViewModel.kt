@@ -193,24 +193,24 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun anlegen(neu: EntryInput) {
         settings.letztesKind = neu.childId
-        schreibe("Eintrag gespeichert.") { it.createEntry(neu) }
+        schreibe("Eintrag gespeichert") { it.createEntry(neu) }
     }
 
     fun aendern(eintrag: Entry, neu: EntryInput) {
-        schreibe("Eintrag geändert.") { it.updateEntry(eintrag.id, neu) }
+        schreibe("Eintrag geändert") { it.updateEntry(eintrag.id, neu) }
     }
 
     fun loeschen(eintrag: Entry) {
-        schreibe("Eintrag gelöscht.") { it.deleteEntry(eintrag.id) }
+        schreibe("Eintrag gelöscht") { it.deleteEntry(eintrag.id) }
     }
 
     // ── Kinder ──────────────────────────────────────────────────────────────
 
-    fun kindAnlegen(name: String) = schreibe("Kind angelegt.") { it.createChild(name) }
+    fun kindAnlegen(name: String) = schreibe("Kind angelegt") { it.createChild(name) }
 
-    fun kindUmbenennen(kind: Child, name: String) = schreibe("Name geändert.") { it.renameChild(kind.id, name) }
+    fun kindUmbenennen(kind: Child, name: String) = schreibe("Name geändert") { it.renameChild(kind.id, name) }
 
-    fun kindLoeschen(kind: Child) = schreibe("Kind gelöscht.") { it.deleteChild(kind.id) }
+    fun kindLoeschen(kind: Child) = schreibe("Kind gelöscht") { it.deleteChild(kind.id) }
 
     /** Führt eine schreibende Aktion aus, meldet das Ergebnis und lädt neu. */
     private fun schreibe(erfolg: String, aktion: suspend (MeltdownService) -> Any?) {
